@@ -53,24 +53,27 @@ function mostrar_opcion_quitar_seguro() {
     $quitar_seguro = isset($_SESSION['quitar_seguro']) && $_SESSION['quitar_seguro'] === 'yes' ? 'checked' : '';
     
     // Obtener el texto de la etiqueta según el estado del seguro de compra
-    $etiqueta_texto = $quitar_seguro ? 'Agregar seguro de compra' : 'Quiero quitar el seguro de compra';
+    $etiqueta_texto = $quitar_seguro ? 'Haz quitado el seguro de compra, desmarca la casilla para volverlo a agregar.' : 'Quiero quitar el seguro de compra';
     
     ?>
     <script type="text/javascript">
         jQuery(document).ready(function($){
-            // Mover la opción de quitar seguro arriba de la fila "fee"
-            var $feeRow = $('.cart_totals .fee').closest('tr');
-            var quitarSeguroHtml = '<tr class="quitar-seguro-option"><td colspan="2" style="font-weight: bold; color: red; margin-top: 10px;"><label><input type="checkbox" id="quitar-seguro" name="quitar_seguro" value="yes" <?php echo $quitar_seguro; ?>> <span id="seguro-texto"><?php echo $etiqueta_texto; ?></span></label></td></tr>';
-            $feeRow.before(quitarSeguroHtml);
+        // Mover la opción de quitar seguro arriba de la fila "fee"
+        var $feeRow = $('.cart_totals .fee').closest('tr');
+        var quitarSeguroHtml = '<tr class="quitar-seguro-option"><td colspan="2" style="font-weight: bold; color: red; margin-top: 10px;"><label><input type="checkbox" id="quitar-seguro" name="quitar_seguro" value="yes" <?php echo $quitar_seguro; ?>> <span id="seguro-texto"><?php echo $etiqueta_texto; ?></span></label></td></tr>';
+        $feeRow.before(quitarSeguroHtml);
 
-            $('#quitar-seguro').change(function(){
-                var quitar_seguro = $(this).is(':checked') ? 'yes' : 'no';
+        $('#quitar-seguro').change(function(){
+            var quitar_seguro = $(this).is(':checked') ? 'yes' : 'no';
 
+            if(quitar_seguro === 'yes'){
                 Swal.fire({
                     title: 'CUIDADO',
-                    text: quitar_seguro === 'yes' ? 'Estás quitando el seguro de compra contra robo parcial o total...' : 'Estás agregando el seguro de compra contra robo parcial o total...',
+                    text: 'Estás quitando el seguro de compra contra robo parcial o total...',
                     icon: 'warning',
-                    confirmButtonText: 'Entendido'
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#d33',
+                    iconColor: '#d33'
                 }).then((result) => {
                     if (result.isConfirmed) {
                         // Hacer la solicitud AJAX para actualizar el carrito
@@ -91,16 +94,49 @@ function mostrar_opcion_quitar_seguro() {
                         });
                     } else {
                         // Si no confirma, revertir la casilla de verificación
-                        $('#quitar-seguro').prop('checked', quitar_seguro !== 'yes');
+                        $('#quitar-seguro').prop('checked', !$(this).is(':checked'));
                     }
                 });
-            });
-
-            // Verificar si la opción para quitar el seguro debe estar marcada
-            if ('<?php echo $quitar_seguro; ?>' === 'yes') {
-                $('#quitar-seguro').prop('checked', true);
+            } else {
+                Swal.fire({
+                    title: 'ÉXITO',
+                    text: 'Haz agregado correctamente el seguro de compra.',
+                    icon: 'success',
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#3085d6',
+                    iconColor: '#3085d6'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Hacer la solicitud AJAX para actualizar el carrito
+                        $.ajax({
+                            type: 'POST',
+                            url: wc_cart_params.ajax_url,
+                            data: {
+                                action: 'actualizar_costo_seguro',
+                                quitar_seguro: quitar_seguro
+                            },
+                            success: function(response) {
+                                // Recargar la página
+                                location.reload();
+                            },
+                            error: function(xhr, status, error) {
+                                console.log('AJAX Error:', error);
+                            }
+                        });
+                    } else {
+                        // Si no confirma, revertir la casilla de verificación
+                        $('#quitar-seguro').prop('checked', !$(this).is(':checked'));
+                    }
+                });
             }
         });
+
+        // Verificar si la opción para quitar el seguro debe estar marcada
+        if ('<?php echo $quitar_seguro; ?>' === 'yes') {
+            $('#quitar-seguro').prop('checked', true);
+        }
+    });
+
     </script>
     <?php
 }
